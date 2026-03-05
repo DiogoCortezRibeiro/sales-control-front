@@ -1,14 +1,15 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Plus, Search, Edit2, Trash2, Package } from 'lucide-react';
 import api from '../lib/api';
+import ConfirmationModal from '../components/ConfirmationModal';
+import toast from 'react-hot-toast';
 
 interface Produto {
     id: string;
     nome: string;
-    sku: string;
     categoria: string;
     precoVenda: number;
-    custo?: number;
+    custo: number;
     estoqueAtual: number;
     estoqueMinimo?: number;
     ativo: boolean;
@@ -24,6 +25,7 @@ export default function ProductsPage() {
     const [showModal, setShowModal] = useState(false);
     const [editing, setEditing] = useState<Produto | null>(null);
     const [form, setForm] = useState<Partial<Produto>>({});
+    const [confirmDelete, setConfirmDelete] = useState<{ id: string } | null>(null);
 
     const fetch = useCallback(async () => {
         setLoading(true);
@@ -40,19 +42,33 @@ export default function ProductsPage() {
     const openEdit = (p: Produto) => { setEditing(p); setForm(p); setShowModal(true); };
 
     const save = async () => {
-        if (editing) {
-            await api.put(`/products/${editing.id}`, form);
-        } else {
-            await api.post('/products', form);
+        if (!form.nome || !form.categoria || !form.precoVenda || !form.custo) {
+            toast.error('Por favor, preencha todos os campos obrigatórios (*)');
+            return;
         }
-        setShowModal(false);
-        await fetch();
+
+        try {
+            if (editing) {
+                await api.put(`/products/${editing.id}`, form);
+            } else {
+                await api.post('/products', form);
+            }
+            toast.success(editing ? 'Produto atualizado' : 'Produto criado');
+            setShowModal(false);
+            await fetch();
+        } catch (e: any) {
+            toast.error(e.response?.data?.message || 'Erro ao salvar produto');
+        }
     };
 
     const remove = async (id: string) => {
-        if (!confirm('Desativar produto?')) return;
-        await api.delete(`/products/${id}`);
-        await fetch();
+        try {
+            await api.delete(`/products/${id}`);
+            toast.success('Produto desativado');
+            await fetch();
+        } catch (e: any) {
+            toast.error('Erro ao excluir produto');
+        }
     };
 
     return (
@@ -65,11 +81,10 @@ export default function ProductsPage() {
                 <button className="btn-primary" onClick={openCreate}><Plus size={16} /> Novo Produto</button>
             </div>
 
-            {/* Filters */}
             <div className="flex gap-3 flex-wrap">
                 <div className="relative flex-1 min-w-[200px]">
                     <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input className="input pl-9" placeholder="Buscar por nome, SKU ou categoria..." value={search} onChange={e => setSearch(e.target.value)} />
+                    <input className="input pl-9" placeholder="Buscar por nome ou categoria..." value={search} onChange={e => setSearch(e.target.value)} />
                 </div>
                 <select className="input w-auto" value={ativo} onChange={e => setAtivo(e.target.value)}>
                     <option value="">Todos</option>
@@ -78,22 +93,21 @@ export default function ProductsPage() {
                 </select>
             </div>
 
-            {/* Table */}
             <div className="card overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead className="bg-gray-50 border-b border-gray-100">
                             <tr>
-                                {['Nome', 'SKU', 'Categoria', 'Preço', 'Estoque', 'Status', 'Ações'].map(h => (
+                                {['Nome', 'Categoria', 'Preço', 'Estoque', 'Status', 'Ações'].map(h => (
                                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
                                 ))}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
                             {loading ? (
-                                <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">Carregando...</td></tr>
+                                <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Carregando...</td></tr>
                             ) : produtos.length === 0 ? (
-                                <tr><td colSpan={7} className="px-4 py-12 text-center text-gray-400">
+                                <tr><td colSpan={6} className="px-4 py-12 text-center text-gray-400">
                                     <Package size={40} className="mx-auto mb-2 opacity-30" />
                                     <p>Nenhum produto encontrado</p>
                                 </td></tr>
@@ -101,7 +115,6 @@ export default function ProductsPage() {
                                 produtos.map(p => (
                                     <tr key={p.id} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-4 py-3 font-medium text-gray-900">{p.nome}</td>
-                                        <td className="px-4 py-3 text-gray-500 font-mono text-xs">{p.sku}</td>
                                         <td className="px-4 py-3 text-gray-600">{p.categoria}</td>
                                         <td className="px-4 py-3 font-medium">{fmt(p.precoVenda)}</td>
                                         <td className="px-4 py-3">
@@ -115,7 +128,7 @@ export default function ProductsPage() {
                                         <td className="px-4 py-3">
                                             <div className="flex gap-1">
                                                 <button onClick={() => openEdit(p)} className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"><Edit2 size={15} /></button>
-                                                <button onClick={() => remove(p.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={15} /></button>
+                                                <button onClick={() => setConfirmDelete({ id: p.id })} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={15} /></button>
                                             </div>
                                         </td>
                                     </tr>
@@ -126,7 +139,6 @@ export default function ProductsPage() {
                 </div>
             </div>
 
-            {/* Modal */}
             {showModal && (
                 <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
@@ -140,11 +152,7 @@ export default function ProductsPage() {
                                     <label className="label">Nome *</label>
                                     <input className="input" value={form.nome || ''} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} />
                                 </div>
-                                <div>
-                                    <label className="label">SKU *</label>
-                                    <input className="input" value={form.sku || ''} onChange={e => setForm(f => ({ ...f, sku: e.target.value }))} disabled={!!editing} />
-                                </div>
-                                <div>
+                                <div className="col-span-2">
                                     <label className="label">Categoria *</label>
                                     <input className="input" value={form.categoria || ''} onChange={e => setForm(f => ({ ...f, categoria: e.target.value }))} />
                                 </div>
@@ -153,7 +161,7 @@ export default function ProductsPage() {
                                     <input type="number" step="0.01" className="input" value={form.precoVenda || ''} onChange={e => setForm(f => ({ ...f, precoVenda: parseFloat(e.target.value) }))} />
                                 </div>
                                 <div>
-                                    <label className="label">Custo</label>
+                                    <label className="label">Custo *</label>
                                     <input type="number" step="0.01" className="input" value={form.custo || ''} onChange={e => setForm(f => ({ ...f, custo: parseFloat(e.target.value) }))} />
                                 </div>
                                 <div>
@@ -177,6 +185,16 @@ export default function ProductsPage() {
                     </div>
                 </div>
             )}
+
+            <ConfirmationModal
+                isOpen={!!confirmDelete}
+                onClose={() => setConfirmDelete(null)}
+                onConfirm={() => confirmDelete && remove(confirmDelete.id)}
+                title="Desativar Produto"
+                message="Tem certeza que deseja desativar este produto? Ele não aparecerá mais para novas vendas."
+                type="danger"
+                confirmText="Desativar"
+            />
         </div>
     );
 }

@@ -33,7 +33,7 @@ export class DashboardService {
 
         // Produtos com estoque baixo
         const produtosEstoqueBaixo = await this.prisma.$queryRaw<any[]>`
-      SELECT id, nome, sku, "estoqueAtual", "estoqueMinimo"
+      SELECT id, nome, "estoqueAtual", "estoqueMinimo"
       FROM produtos
       WHERE ativo = true
         AND "estoqueMinimo" IS NOT NULL
@@ -41,13 +41,36 @@ export class DashboardService {
       LIMIT 10
     `;
 
+        // Parcelas atrasadas
+        const hoje_date = new Date();
+        const parcelasAtrasadas = await this.prisma.parcela.count({
+            where: {
+                status: 'PENDENTE',
+                dataVencimento: { lt: hoje_date },
+                venda: { status: 'CONCLUIDA' }
+            }
+        });
+
+        // Lucro do mês
+        const lucroMesRaw = await this.prisma.$queryRaw<any[]>`
+            SELECT 
+                SUM(iv.quantidade * (iv."valorUnitario" - p.custo)) as lucro
+            FROM itens_venda iv
+            INNER JOIN produtos p ON p.id = iv."produtoId"
+            INNER JOIN vendas v ON v.id = iv."vendaId"
+            WHERE v.status = 'CONCLUIDA' 
+              AND v."dataVenda" >= ${inicioMes}
+        `;
+
         return {
             vendasHoje,
             vendasMes,
             totalHoje: Number(totalHoje._sum.total || 0),
             totalMes: Number(totalMes._sum.total || 0),
+            lucroMes: Number(lucroMesRaw[0]?.lucro || 0),
             ticketMedioMes,
             produtosEstoqueBaixo: produtosEstoqueBaixo.length,
+            parcelasAtrasadas,
         };
     }
 
@@ -56,15 +79,15 @@ export class DashboardService {
       SELECT
         p.id,
         p.nome,
-        p.sku,
         p.categoria,
         SUM(iv.quantidade)::integer as "totalVendido",
-        SUM(iv."totalItem") as "totalReceita"
+        SUM(iv."totalItem") as "totalReceita",
+        SUM(iv.quantidade * (iv."valorUnitario" - p.custo)) as "totalGanho"
       FROM itens_venda iv
       INNER JOIN produtos p ON p.id = iv."produtoId"
       INNER JOIN vendas v ON v.id = iv."vendaId"
       WHERE v.status = 'CONCLUIDA'
-      GROUP BY p.id, p.nome, p.sku, p.categoria
+      GROUP BY p.id, p.nome, p.categoria
       ORDER BY "totalVendido" DESC
       LIMIT ${limit}
     `;
@@ -73,6 +96,7 @@ export class DashboardService {
             ...r,
             totalVendido: Number(r.totalVendido),
             totalReceita: Number(r.totalReceita),
+            totalGanho: Number(r.totalGanho),
         }));
     }
 

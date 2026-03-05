@@ -43,6 +43,12 @@ export class CreateSaleDto {
     @IsString()
     observacoes?: string;
 
+    @IsOptional()
+    @IsInt()
+    @Min(1)
+    @Type(() => Number)
+    quantidadeParcelas?: number;
+
     @IsArray()
     @ValidateNested({ each: true })
     @Type(() => ItemVendaDto)

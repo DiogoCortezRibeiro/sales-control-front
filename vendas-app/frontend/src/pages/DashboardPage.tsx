@@ -2,21 +2,29 @@ import React, { useEffect, useState } from 'react';
 import {
     AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import { TrendingUp, ShoppingCart, Users, Package, AlertTriangle } from 'lucide-react';
+import { TrendingUp, ShoppingCart, Users, Package, AlertTriangle, DollarSign, Clock } from 'lucide-react';
 import api from '../lib/api';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-function KpiCard({ title, value, sub, icon: Icon, color }: any) {
+function KpiCard({ title, value, sub, icon: Icon, color, trend }: any) {
     return (
-        <div className="card p-5 flex items-start gap-4">
-            <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${color}`}>
-                <Icon size={22} className="text-white" />
+        <div className="card p-6 flex flex-col justify-between gap-4 relative overflow-hidden group hover:scale-[1.02] transition-all duration-300">
+            <div className={`absolute top-0 right-0 w-24 h-24 rounded-full -mr-8 -mt-8 opacity-10 ${color}`}></div>
+            <div className="flex items-center justify-between relative z-10">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg ${color}`}>
+                    <Icon size={24} className="text-white" />
+                </div>
+                {trend && (
+                    <span className={`text-xs font-bold px-2 py-1 rounded-lg ${trend > 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'}`}>
+                        {trend > 0 ? '+' : ''}{trend}%
+                    </span>
+                )}
             </div>
-            <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-500">{title}</p>
-                <p className="text-2xl font-bold text-gray-900 mt-0.5">{value}</p>
-                {sub && <p className="text-xs text-gray-500 mt-0.5">{sub}</p>}
+            <div className="relative z-10">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{title}</p>
+                <p className="text-3xl font-black text-gray-900 mt-1">{value}</p>
+                {sub && <p className="text-sm text-gray-500 mt-1 font-medium">{sub}</p>}
             </div>
         </div>
     );
@@ -59,34 +67,48 @@ export default function DashboardPage() {
             </div>
 
             {/* KPIs */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <KpiCard
-                    title="Total hoje"
+                    title="Vendas Hoje"
                     value={fmt(kpis?.totalHoje || 0)}
-                    sub={`${kpis?.vendasHoje || 0} vendas`}
+                    sub={`${kpis?.vendasHoje || 0} pedidos concluídos`}
                     icon={TrendingUp}
-                    color="bg-green-500"
+                    color="bg-indigo-600 shadow-indigo-200"
                 />
                 <KpiCard
-                    title="Total do mês"
+                    title="Receita do Mês"
                     value={fmt(kpis?.totalMes || 0)}
-                    sub={`${kpis?.vendasMes || 0} vendas`}
+                    sub={`${kpis?.vendasMes || 0} vendas no período`}
                     icon={ShoppingCart}
-                    color="bg-primary-600"
+                    color="bg-primary-600 shadow-primary-200"
                 />
                 <KpiCard
-                    title="Ticket médio"
+                    title="Lucro Líquido"
+                    value={fmt(kpis?.lucroMes || 0)}
+                    sub="Receita - Custo de Produtos"
+                    icon={DollarSign}
+                    color="bg-emerald-600 shadow-emerald-200"
+                />
+                <KpiCard
+                    title="Ticket Médio"
                     value={fmt(kpis?.ticketMedioMes || 0)}
-                    sub="No mês atual"
-                    icon={Users}
-                    color="bg-purple-500"
+                    sub="Valor médio por venda"
+                    icon={TrendingUp}
+                    color="bg-violet-600 shadow-violet-200"
                 />
                 <KpiCard
-                    title="Estoque crítico"
+                    title="Cobranças Pendentes"
+                    value={kpis?.parcelasAtrasadas || 0}
+                    sub="Parcelas em atraso"
+                    icon={Clock}
+                    color={kpis?.parcelasAtrasadas > 0 ? 'bg-rose-600 shadow-rose-200' : 'bg-slate-600 shadow-slate-200'}
+                />
+                <KpiCard
+                    title="Atenção Estoque"
                     value={kpis?.produtosEstoqueBaixo || 0}
-                    sub="Produtos abaixo do mínimo"
-                    icon={kpis?.produtosEstoqueBaixo > 0 ? AlertTriangle : Package}
-                    color={kpis?.produtosEstoqueBaixo > 0 ? 'bg-red-500' : 'bg-orange-500'}
+                    sub="Itens abaixo do mínimo"
+                    icon={AlertTriangle}
+                    color={kpis?.produtosEstoqueBaixo > 0 ? 'bg-orange-600 shadow-orange-200' : 'bg-slate-600 shadow-slate-200'}
                 />
             </div>
 
@@ -127,8 +149,10 @@ export default function DashboardPage() {
                                 <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                                 <XAxis type="number" tick={{ fontSize: 11 }} />
                                 <YAxis dataKey="nome" type="category" tick={{ fontSize: 11 }} width={80} />
-                                <Tooltip />
-                                <Bar dataKey="totalVendido" fill="#6175f1" name="Qtd Vendida" radius={[0, 4, 4, 0]} />
+                                <Tooltip formatter={(v: any, name: any) => name === 'Lucro (R$)' || name === 'Receita (R$)' ? fmt(Number(v)) : v} />
+                                <Bar dataKey="totalVendido" fill="#c7d2fe" name="Qtd" radius={[0, 4, 4, 0]} />
+                                <Bar dataKey="totalReceita" fill="#818cf8" name="Receita (R$)" radius={[0, 4, 4, 0]} />
+                                <Bar dataKey="totalGanho" fill="#6175f1" name="Lucro (R$)" radius={[0, 4, 4, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     ) : (
@@ -137,6 +161,7 @@ export default function DashboardPage() {
                         </div>
                     )}
                 </div>
+
             </div>
         </div>
     );

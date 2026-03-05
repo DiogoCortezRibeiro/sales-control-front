@@ -3,7 +3,7 @@ import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
     LayoutDashboard, Package, Users, ShoppingCart, BarChart2,
-    LogOut, Menu, X, TrendingUp
+    LogOut, Menu, X, TrendingUp, Bell, Search, ChevronDown
 } from 'lucide-react';
 
 const navItems = [
@@ -19,7 +19,7 @@ export default function Layout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     return (
-        <div className="flex h-screen bg-gray-50">
+        <div className="flex h-screen bg-transparent">
             {/* Mobile overlay */}
             {sidebarOpen && (
                 <div className="fixed inset-0 z-20 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />
@@ -27,7 +27,7 @@ export default function Layout() {
 
             {/* Sidebar */}
             <aside className={`
-        fixed inset-y-0 left-0 z-30 w-64 bg-slate-900 flex flex-col transform transition-transform duration-300
+        fixed inset-y-0 left-0 z-30 w-64 bg-slate-900 shadow-2xl flex flex-col transform transition-all duration-300 ease-in-out
         lg:relative lg:translate-x-0
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
@@ -85,16 +85,9 @@ export default function Layout() {
             </aside>
 
             {/* Main */}
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                {/* Topbar */}
-                <header className="h-16 bg-white border-b border-gray-100 flex items-center px-4 lg:px-6 gap-4">
-                    <button className="lg:hidden text-gray-500" onClick={() => setSidebarOpen(true)}>
-                        <Menu size={22} />
-                    </button>
-                </header>
-
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
                 {/* Content */}
-                <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+                <main className="flex-1 overflow-y-auto px-6 py-8 lg:px-10 custom-scrollbar animate-fade-in">
                     <Outlet />
                 </main>
             </div>

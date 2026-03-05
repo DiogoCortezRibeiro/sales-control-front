@@ -8,18 +8,15 @@ export class CreateProductDto {
 
     @IsNotEmpty()
     @IsString()
-    sku: string;
-
-    @IsNotEmpty()
-    @IsString()
     categoria: string;
 
     @Type(() => Number)
+    @IsNotEmpty()
     precoVenda: number;
 
-    @IsOptional()
+    @IsNotEmpty()
     @Type(() => Number)
-    custo?: number;
+    custo: number;
 
     @IsOptional()
     @Type(() => Number)

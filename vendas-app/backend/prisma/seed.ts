@@ -22,24 +22,26 @@ async function main() {
 
     // Criar algumas categorias de produtos de exemplo
     const produtos = [
-        { nome: 'Camiseta Básica P', sku: 'CAM-P-001', categoria: 'Roupas', precoVenda: 49.90, custo: 20.00, estoqueAtual: 50, estoqueMinimo: 5 },
-        { nome: 'Camiseta Básica M', sku: 'CAM-M-001', categoria: 'Roupas', precoVenda: 49.90, custo: 20.00, estoqueAtual: 50, estoqueMinimo: 5 },
-        { nome: 'Calça Jeans 38', sku: 'CAL-38-001', categoria: 'Roupas', precoVenda: 129.90, custo: 60.00, estoqueAtual: 30, estoqueMinimo: 3 },
-        { nome: 'Tênis Casual 38', sku: 'TEN-38-001', categoria: 'Calçados', precoVenda: 199.90, custo: 90.00, estoqueAtual: 20, estoqueMinimo: 2 },
-        { nome: 'Bolsa de Couro', sku: 'BOL-001', categoria: 'Acessórios', precoVenda: 89.90, custo: 35.00, estoqueAtual: 15, estoqueMinimo: 2 },
+        { nome: 'Camiseta Básica P', categoria: 'Roupas', precoVenda: 49.90, custo: 20.00, estoqueAtual: 50, estoqueMinimo: 5 },
+        { nome: 'Camiseta Básica M', categoria: 'Roupas', precoVenda: 49.90, custo: 20.00, estoqueAtual: 50, estoqueMinimo: 5 },
+        { nome: 'Calça Jeans 38', categoria: 'Roupas', precoVenda: 129.90, custo: 60.00, estoqueAtual: 30, estoqueMinimo: 3 },
+        { nome: 'Tênis Casual 38', categoria: 'Calçados', precoVenda: 199.90, custo: 90.00, estoqueAtual: 20, estoqueMinimo: 2 },
+        { nome: 'Bolsa de Couro', categoria: 'Acessórios', precoVenda: 89.90, custo: 35.00, estoqueAtual: 15, estoqueMinimo: 2 },
     ];
 
     for (const p of produtos) {
-        await prisma.produto.upsert({
-            where: { sku: p.sku },
-            update: {},
-            create: {
-                ...p,
-                precoVenda: p.precoVenda,
-                custo: p.custo,
-                ativo: true,
-            },
-        });
+        // Find existing product by name since we removed sku
+        const existing = await prisma.produto.findFirst({ where: { nome: p.nome } });
+        if (existing) {
+            await prisma.produto.update({
+                where: { id: existing.id },
+                data: { ...p, ativo: true }
+            });
+        } else {
+            await prisma.produto.create({
+                data: { ...p, ativo: true }
+            });
+        }
     }
 
     console.log('✅ Produtos de exemplo criados');

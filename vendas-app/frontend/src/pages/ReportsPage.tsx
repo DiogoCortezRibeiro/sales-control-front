@@ -10,7 +10,9 @@ interface Venda {
     formaPagamento: string;
     total: number;
     cliente: { nome: string };
-    itens: Array<{ produto: { nome: string; sku: string } }>;
+    itens: Array<{ produto: { nome: string } }>;
+    custoVenda: number;
+    lucroVenda: number;
 }
 
 const fmt = (n: number) => Number(n).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -40,12 +42,14 @@ export default function ReportsPage() {
 
     const exportCsv = () => {
         if (vendas.length === 0) return;
-        const header = ['Data', 'Cliente', 'Pagamento', 'Total', 'Produtos'];
+        const header = ['Data', 'Cliente', 'Pagamento', 'Custo Total', 'Total Venda', 'Lucro', 'Produtos'];
         const rows = vendas.map(v => [
             fmtDate(v.dataVenda),
             v.cliente?.nome,
             v.formaPagamento,
+            v.custoVenda.toString().replace('.', ','),
             v.total.toString().replace('.', ','),
+            v.lucroVenda.toString().replace('.', ','),
             v.itens.map(i => i.produto.nome).join(' | ')
         ]);
 
@@ -83,13 +87,13 @@ export default function ReportsPage() {
 
             {resumo && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="card p-4 border-l-4 border-l-primary-500">
-                        <p className="text-sm text-gray-500">Total Período</p>
-                        <p className="text-2xl font-bold text-gray-900 mt-1">{fmt(resumo.totalGeral)}</p>
+                    <div className="card p-4 border-l-4 border-l-orange-500">
+                        <p className="text-sm text-gray-500">Custo Total</p>
+                        <p className="text-2xl font-bold text-gray-900 mt-1">{fmt(resumo.totalCusto)}</p>
                     </div>
-                    <div className="card p-4 border-l-4 border-l-green-500">
-                        <p className="text-sm text-gray-500">Qtd. Vendas</p>
-                        <p className="text-2xl font-bold text-gray-900 mt-1">{resumo.totalVendas}</p>
+                    <div className="card p-4 border-l-4 border-l-emerald-500">
+                        <p className="text-sm text-gray-500">Lucro Total</p>
+                        <p className="text-2xl font-bold text-gray-900 mt-1">{fmt(resumo.totalLucro)}</p>
                     </div>
                     <div className="card p-4 border-l-4 border-l-purple-500">
                         <p className="text-sm text-gray-500">Ticket Médio</p>
@@ -103,7 +107,7 @@ export default function ReportsPage() {
                     <table className="w-full text-sm">
                         <thead className="bg-gray-50 border-b border-gray-100 sticky top-0">
                             <tr>
-                                {['Data', 'Cliente', 'Pagamento', 'Produtos', 'Total'].map(h => (
+                                {['Data', 'Cliente', 'Custo', 'Total', 'Lucro', 'Produtos'].map(h => (
                                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
                                 ))}
                             </tr>
@@ -121,11 +125,12 @@ export default function ReportsPage() {
                                     <tr key={v.id} className="hover:bg-gray-50">
                                         <td className="px-4 py-3 text-gray-600">{fmtDate(v.dataVenda)}</td>
                                         <td className="px-4 py-3 font-medium text-gray-900">{v.cliente?.nome}</td>
-                                        <td className="px-4 py-3 text-gray-600">{v.formaPagamento}</td>
+                                        <td className="px-4 py-3 text-gray-600">{fmt(v.custoVenda)}</td>
+                                        <td className="px-4 py-3 font-medium">{fmt(v.total)}</td>
+                                        <td className="px-4 py-3 font-medium text-emerald-600">{fmt(v.lucroVenda)}</td>
                                         <td className="px-4 py-3 text-gray-500 text-xs max-w-[200px] truncate">
                                             {v.itens.map(i => i.produto.nome).join(', ')}
                                         </td>
-                                        <td className="px-4 py-3 font-medium">{fmt(v.total)}</td>
                                     </tr>
                                 ))
                             )}

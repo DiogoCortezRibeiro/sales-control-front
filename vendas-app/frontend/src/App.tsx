@@ -20,9 +20,12 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
     return usuario ? <>{children}</> : <Navigate to="/login" replace />;
 }
 
+import { Toaster } from 'react-hot-toast';
+
 export default function App() {
     return (
         <AuthProvider>
+            <Toaster position="top-right" />
             <BrowserRouter>
                 <Routes>
                     <Route path="/login" element={<LoginPage />} />

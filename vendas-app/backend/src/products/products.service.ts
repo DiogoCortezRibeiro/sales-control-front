@@ -24,7 +24,6 @@ export class ProductsService {
         if (query.search) {
             where.OR = [
                 { nome: { contains: query.search, mode: 'insensitive' } },
-                { sku: { contains: query.search, mode: 'insensitive' } },
                 { categoria: { contains: query.search, mode: 'insensitive' } },
             ];
         }
@@ -55,9 +54,6 @@ export class ProductsService {
     }
 
     async create(dto: CreateProductDto) {
-        const exists = await this.prisma.produto.findUnique({ where: { sku: dto.sku } });
-        if (exists) throw new ConflictException('SKU já cadastrado');
-
         return this.prisma.produto.create({ data: dto });
     }
 

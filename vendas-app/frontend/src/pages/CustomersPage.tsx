@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { Plus, Search, Edit2, Trash2, Users } from 'lucide-react';
 import api from '../lib/api';
+import ConfirmationModal from '../components/ConfirmationModal';
+import toast from 'react-hot-toast';
 
 interface Cliente {
     id: string;
@@ -20,6 +22,7 @@ export default function CustomersPage() {
     const [showModal, setShowModal] = useState(false);
     const [editing, setEditing] = useState<Cliente | null>(null);
     const [form, setForm] = useState<Partial<Cliente>>({});
+    const [confirmDelete, setConfirmDelete] = useState<{ id: string } | null>(null);
 
     const fetch = useCallback(async () => {
         setLoading(true);
@@ -36,19 +39,33 @@ export default function CustomersPage() {
     const openEdit = (c: Cliente) => { setEditing(c); setForm(c); setShowModal(true); };
 
     const save = async () => {
-        if (editing) {
-            await api.put(`/customers/${editing.id}`, form);
-        } else {
-            await api.post('/customers', form);
+        if (!form.nome || !form.telefone) {
+            toast.error('Por favor, preencha o nome e telefone');
+            return;
         }
-        setShowModal(false);
-        await fetch();
+
+        try {
+            if (editing) {
+                await api.put(`/customers/${editing.id}`, form);
+            } else {
+                await api.post('/customers', form);
+            }
+            toast.success(editing ? 'Cliente atualizado' : 'Cliente cadastrado');
+            setShowModal(false);
+            await fetch();
+        } catch (e: any) {
+            toast.error(e.response?.data?.message || 'Erro ao salvar cliente');
+        }
     };
 
     const remove = async (id: string) => {
-        if (!confirm('Excluir cliente?')) return;
-        await api.delete(`/customers/${id}`);
-        await fetch();
+        try {
+            await api.delete(`/customers/${id}`);
+            toast.success('Cliente removido');
+            await fetch();
+        } catch (e: any) {
+            toast.error('Erro ao excluir cliente');
+        }
     };
 
     return (
@@ -96,7 +113,7 @@ export default function CustomersPage() {
                                         <td className="px-4 py-3">
                                             <div className="flex gap-1">
                                                 <button onClick={() => openEdit(c)} className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"><Edit2 size={15} /></button>
-                                                <button onClick={() => remove(c.id)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={15} /></button>
+                                                <button onClick={() => setConfirmDelete({ id: c.id })} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={15} /></button>
                                             </div>
                                         </td>
                                     </tr>
@@ -112,7 +129,7 @@ export default function CustomersPage() {
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
                         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
                             <h2 className="font-semibold text-lg">{editing ? 'Editar Cliente' : 'Novo Cliente'}</h2>
-                            <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 text-xl">×</button>
+                            <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
                         </div>
                         <div className="p-6 space-y-4">
                             <div className="grid grid-cols-2 gap-4">
@@ -149,6 +166,16 @@ export default function CustomersPage() {
                     </div>
                 </div>
             )}
+
+            <ConfirmationModal
+                isOpen={!!confirmDelete}
+                onClose={() => setConfirmDelete(null)}
+                onConfirm={() => confirmDelete && remove(confirmDelete.id)}
+                title="Excluir Cliente"
+                message="Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita se houver vendas vinculadas."
+                type="danger"
+                confirmText="Excluir"
+            />
         </div>
     );
 }

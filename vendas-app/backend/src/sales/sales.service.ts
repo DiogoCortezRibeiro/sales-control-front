@@ -6,10 +6,17 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateSaleDto } from './dto/sale.dto';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class SalesService {
     constructor(private prisma: PrismaService) { }
+
+    private readonly vendaInclude = {
+        cliente: { select: { id: true, nome: true, telefone: true } },
+        itens: { include: { produto: true } },
+        parcelas: { orderBy: { numero: 'asc' } as const },
+    };
 
     async findAll(query: {
         search?: string;
@@ -48,10 +55,7 @@ export class SalesService {
                 skip,
                 take: limit,
                 orderBy: { dataVenda: 'desc' },
-                include: {
-                    cliente: { select: { id: true, nome: true, telefone: true } },
-                    itens: { include: { produto: { select: { id: true, nome: true, sku: true } } } },
-                },
+                include: this.vendaInclude,
             }),
             this.prisma.venda.count({ where }),
         ]);
@@ -65,10 +69,7 @@ export class SalesService {
     async findOne(id: string) {
         const venda = await this.prisma.venda.findUnique({
             where: { id },
-            include: {
-                cliente: true,
-                itens: { include: { produto: true } },
-            },
+            include: this.vendaInclude,
         });
         if (!venda) throw new NotFoundException('Venda não encontrada');
         return venda;
@@ -101,6 +102,27 @@ export class SalesService {
         const desconto = dto.desconto || 0;
         const total = subtotal - desconto;
 
+        let parcelasCriar = [];
+        if (dto.formaPagamento === 'CARTAO' && dto.quantidadeParcelas && dto.quantidadeParcelas > 0) {
+            const numParcelas = dto.quantidadeParcelas;
+            const valorBase = Math.floor((total / numParcelas) * 100) / 100;
+            const resto = Math.round((total - (valorBase * numParcelas)) * 100) / 100;
+
+            for (let i = 1; i <= numParcelas; i++) {
+                const isLast = i === numParcelas;
+                const valorParcela = isLast ? valorBase + resto : valorBase;
+                const dataVencimento = new Date();
+                dataVencimento.setDate(dataVencimento.getDate() + (30 * i));
+
+                parcelasCriar.push({
+                    numero: i,
+                    valor: valorParcela,
+                    dataVencimento,
+                    status: 'PENDENTE'
+                });
+            }
+        }
+
         // Criar venda e itens em transação
         const venda = await this.prisma.$transaction(async (tx) => {
             const novaVenda = await tx.venda.create({
@@ -120,11 +142,9 @@ export class SalesService {
                             totalItem: item.valorUnitario * item.quantidade,
                         })),
                     },
+                    parcelas: parcelasCriar.length > 0 ? { create: parcelasCriar } : undefined,
                 },
-                include: {
-                    cliente: true,
-                    itens: { include: { produto: true } },
-                },
+                include: this.vendaInclude,
             });
 
             // Dar baixa no estoque
@@ -143,22 +163,15 @@ export class SalesService {
 
     async cancel(id: string) {
         const venda = await this.findOne(id);
+        if (venda.status === 'CANCELADA') throw new ConflictException('Venda já está cancelada');
 
-        if (venda.status === 'CANCELADA') {
-            throw new ConflictException('Venda já está cancelada');
-        }
-
-        // Devolver estoque e cancelar em transação
         await this.prisma.$transaction(async (tx) => {
-            // Devolver estoque
-            for (const item of venda.itens) {
+            for (const item of (venda as any).itens) {
                 await tx.produto.update({
                     where: { id: item.produtoId },
                     data: { estoqueAtual: { increment: item.quantidade } },
                 });
             }
-
-            // Cancelar venda
             await tx.venda.update({
                 where: { id },
                 data: { status: 'CANCELADA' },
@@ -168,7 +181,6 @@ export class SalesService {
         return { message: 'Venda cancelada e estoque devolvido com sucesso' };
     }
 
-    // Relatório de vendas por período
     async getReport(query: {
         dataInicio?: string;
         dataFim?: string;
@@ -193,17 +205,23 @@ export class SalesService {
             orderBy: { dataVenda: 'desc' },
             include: {
                 cliente: { select: { nome: true } },
-                itens: { include: { produto: { select: { nome: true, sku: true } } } },
+                itens: { include: { produto: { select: { nome: true, custo: true } } } },
             },
         });
 
         const totalGeral = vendas.reduce((acc, v) => acc + Number(v.total), 0);
+        const totalCusto = vendas.reduce((acc, v) => acc + v.itens.reduce((accI, i) => accI + (Number(i.produto.custo) * i.quantidade), 0), 0);
+        const totalLucro = totalGeral - totalCusto;
         const totalVendas = vendas.length;
         const ticketMedio = totalVendas > 0 ? totalGeral / totalVendas : 0;
 
         return {
-            vendas,
-            resumo: { totalGeral, totalVendas, ticketMedio },
+            vendas: vendas.map(v => ({
+                ...v,
+                custoVenda: v.itens.reduce((accI, i) => accI + (Number(i.produto.custo) * i.quantidade), 0),
+                lucroVenda: Number(v.total) - v.itens.reduce((accI, i) => accI + (Number(i.produto.custo) * i.quantidade), 0),
+            })),
+            resumo: { totalGeral, totalCusto, totalLucro, totalVendas, ticketMedio },
         };
     }
 }
