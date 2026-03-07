@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
-import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { Outlet, NavLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import {
-    LayoutDashboard, Package, Users, ShoppingCart, BarChart2,
-    LogOut, Menu, X, TrendingUp, Bell, Search, ChevronDown
+    LayoutDashboard, Package, Users, ShoppingCart, FileText,
+    LogOut, Menu, X, TrendingUp, Wallet
 } from 'lucide-react';
 
-const navItems = [
-    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/sales', icon: ShoppingCart, label: 'Vendas' },
-    { to: '/products', icon: Package, label: 'Produtos' },
-    { to: '/customers', icon: Users, label: 'Clientes' },
-    { to: '/reports', icon: BarChart2, label: 'Relatórios' },
+const menuItems = [
+    { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/products', icon: Package, label: 'Produtos' },
+    { path: '/customers', icon: Users, label: 'Clientes' },
+    { path: '/sales', icon: ShoppingCart, label: 'Vendas' },
+    { path: '/finance', icon: Wallet, label: 'Financeiro' },
+    { path: '/reports', icon: FileText, label: 'Relatórios' },
 ];
 
 export default function Layout() {
@@ -27,10 +28,10 @@ export default function Layout() {
 
             {/* Sidebar */}
             <aside className={`
-        fixed inset-y-0 left-0 z-30 w-64 bg-slate-900 shadow-2xl flex flex-col transform transition-all duration-300 ease-in-out
-        lg:relative lg:translate-x-0
-        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
+                fixed inset-y-0 left-0 z-30 w-64 bg-slate-900 shadow-2xl flex flex-col transform transition-all duration-300 ease-in-out
+                lg:relative lg:translate-x-0
+                ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+            `}>
                 {/* Logo */}
                 <div className="h-16 flex items-center gap-3 px-6 border-b border-slate-700">
                     <div className="w-8 h-8 bg-primary-500 rounded-lg flex items-center justify-center">
@@ -40,21 +41,23 @@ export default function Layout() {
                     <button className="lg:hidden ml-auto text-slate-400" onClick={() => setSidebarOpen(false)}>
                         <X size={20} />
                     </button>
+                    <button className="lg:hidden ml-auto text-white" onClick={() => setSidebarOpen(false)}>
+                        <X size={24} />
+                    </button>
                 </div>
 
                 {/* Nav */}
                 <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-                    {navItems.map(({ to, icon: Icon, label }) => (
+                    {menuItems.map(({ path, icon: Icon, label }) => (
                         <NavLink
-                            key={to}
-                            to={to}
+                            key={path}
+                            to={path}
                             onClick={() => setSidebarOpen(false)}
                             className={({ isActive }) =>
                                 `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all
-                ${isActive
-                                    ? 'bg-primary-600 text-white'
-                                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
-                                }`
+                                ${isActive
+                                    ? 'bg-primary-600 text-white shadow-lg shadow-primary-900/20'
+                                    : 'text-slate-400 hover:text-white hover:bg-slate-800'}`
                             }
                         >
                             <Icon size={18} />
@@ -86,8 +89,16 @@ export default function Layout() {
 
             {/* Main */}
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+                {/* Header mobile */}
+                <header className="h-16 lg:hidden flex items-center px-4 bg-white border-b border-gray-100 shrink-0">
+                    <button onClick={() => setSidebarOpen(true)} className="p-2 text-gray-600">
+                        <Menu size={24} />
+                    </button>
+                    <span className="ml-4 font-bold text-gray-900">VendasPro</span>
+                </header>
+
                 {/* Content */}
-                <main className="flex-1 overflow-y-auto px-6 py-8 lg:px-10 custom-scrollbar animate-fade-in">
+                <main className="flex-1 overflow-y-auto px-6 py-8 lg:px-10 custom-scrollbar animate-fade-in relative">
                     <Outlet />
                 </main>
             </div>

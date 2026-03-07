@@ -8,22 +8,27 @@ export class DashboardController {
     constructor(private dashboardService: DashboardService) { }
 
     @Get('kpis')
-    getKpis() {
-        return this.dashboardService.getKpis();
+    getKpis(@Query() query: any) {
+        return this.dashboardService.getKpis(query);
     }
 
     @Get('top-products')
-    getTopProducts(@Query('limit') limit?: number) {
-        return this.dashboardService.getTopProducts(limit || 5);
+    getTopProducts(@Query() query: any) {
+        return this.dashboardService.getTopProducts(query);
     }
 
     @Get('sales-series')
-    getSalesTimeSeries(@Query('days') days?: number) {
-        return this.dashboardService.getSalesTimeSeries(days || 30);
+    getSalesTimeSeries(@Query() query: any) {
+        return this.dashboardService.getSalesTimeSeries(query);
     }
 
     @Get('payment-breakdown')
-    getPaymentMethodBreakdown() {
-        return this.dashboardService.getPaymentMethodBreakdown();
+    getPaymentMethodBreakdown(@Query() query: any) {
+        return this.dashboardService.getPaymentMethodBreakdown(query);
+    }
+
+    @Get('top-customers')
+    getTopCustomers(@Query() query: any) {
+        return this.dashboardService.getTopCustomers(query);
     }
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Plus, Search, Edit2, Trash2, Package } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Package, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../lib/api';
 import ConfirmationModal from '../components/ConfirmationModal';
 import toast from 'react-hot-toast';
@@ -27,14 +27,18 @@ export default function ProductsPage() {
     const [form, setForm] = useState<Partial<Produto>>({});
     const [confirmDelete, setConfirmDelete] = useState<{ id: string } | null>(null);
 
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
+
     const fetch = useCallback(async () => {
         setLoading(true);
-        const p: any = { search, limit: 100 };
+        const p: any = { search, page, limit: 10 };
         if (ativo !== '') p.ativo = ativo;
         const { data } = await api.get('/products', { params: p });
         setProdutos(data.data);
+        setTotalPages(data.meta.totalPages);
         setLoading(false);
-    }, [search, ativo]);
+    }, [search, ativo, page]);
 
     useEffect(() => { fetch(); }, [fetch]);
 
@@ -84,9 +88,9 @@ export default function ProductsPage() {
             <div className="flex gap-3 flex-wrap">
                 <div className="relative flex-1 min-w-[200px]">
                     <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input className="input pl-9" placeholder="Buscar por nome ou categoria..." value={search} onChange={e => setSearch(e.target.value)} />
+                    <input className="input pl-9" placeholder="Buscar por nome ou categoria..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
                 </div>
-                <select className="input w-auto" value={ativo} onChange={e => setAtivo(e.target.value)}>
+                <select className="input w-auto" value={ativo} onChange={e => { setAtivo(e.target.value); setPage(1); }}>
                     <option value="">Todos</option>
                     <option value="true">Ativos</option>
                     <option value="false">Inativos</option>
@@ -137,6 +141,29 @@ export default function ProductsPage() {
                         </tbody>
                     </table>
                 </div>
+                {totalPages > 1 && (
+                    <div className="px-6 py-4 bg-gray-50/30 border-t border-gray-100 flex items-center justify-between">
+                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                            Página {page} de {totalPages}
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setPage(p => Math.max(1, p - 1))}
+                                disabled={page === 1}
+                                className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 disabled:opacity-50 hover:bg-gray-50 transition-colors"
+                            >
+                                <ChevronLeft size={16} />
+                            </button>
+                            <button
+                                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                disabled={page === totalPages}
+                                className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 disabled:opacity-50 hover:bg-gray-50 transition-colors"
+                            >
+                                <ChevronRight size={16} />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {showModal && (

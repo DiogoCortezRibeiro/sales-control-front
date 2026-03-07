@@ -23,15 +23,20 @@ cd /home/diogo.ribeiro@db1.com.br/projeto-pessoal/vendas-app/
 docker compose up --build -d
 ```
 
-3. O sistema fará todo o setup automaticamente (migrações do banco e inserção do Admin e produtos/clientes de exemplo).
+3. O sistema fará todo o setup automaticamente (migrações do banco e criação dos usuários iniciais).
 
 4. Acesse o sistema pelo navegador:
    - Frontend: [http://localhost](http://localhost) (ou http://localhost:80)
    - Backend API: [http://localhost:3000/api](http://localhost:3000/api)
 
-## Credenciais do Admin
+## Credenciais Padrão
+### Admin Geral
 - **Email:** `admin@vendas.com`
 - **Senha:** `admin123`
+
+### Usuário Dany
+- **Email:** `danycortez@gmail.com`
+- **Senha:** `dany123*`
 
 ## Stack
 - Frontend: Vite + React + TypeScript + TailwindCSS + Recharts + Lucide

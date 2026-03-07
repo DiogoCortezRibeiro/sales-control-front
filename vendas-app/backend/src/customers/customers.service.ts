@@ -8,7 +8,7 @@ export class CustomersService {
 
     async findAll(query: { search?: string; page?: number; limit?: number }) {
         const page = Number(query.page) || 1;
-        const limit = Number(query.limit) || 20;
+        const limit = Number(query.limit) || 10;
         const skip = (page - 1) * limit;
 
         const where: any = {};
@@ -39,18 +39,38 @@ export class CustomersService {
     }
 
     async findOne(id: string) {
-        const cliente = await this.prisma.cliente.findUnique({
-            where: { id },
-            include: {
-                vendas: {
-                    orderBy: { dataVenda: 'desc' },
-                    take: 5,
-                    include: { itens: { include: { produto: true } } },
+        const [cliente, totalGasto, parcelasPendentes] = await Promise.all([
+            this.prisma.cliente.findUnique({
+                where: { id },
+                include: {
+                    vendas: {
+                        orderBy: { dataVenda: 'desc' },
+                        take: 10,
+                        include: { itens: { include: { produto: true } } },
+                    },
                 },
-            },
-        });
+            }),
+            this.prisma.venda.aggregate({
+                where: { clienteId: id, status: 'CONCLUIDA' },
+                _sum: { total: true }
+            }),
+            this.prisma.parcela.findMany({
+                where: {
+                    venda: { clienteId: id },
+                    status: 'PENDENTE'
+                },
+                orderBy: { dataVencimento: 'asc' },
+                include: { venda: { select: { total: true, dataVenda: true } } }
+            })
+        ]);
+
         if (!cliente) throw new NotFoundException('Cliente não encontrado');
-        return cliente;
+
+        return {
+            ...cliente,
+            totalGasto: Number(totalGasto._sum.total || 0),
+            parcelasPendentes
+        };
     }
 
     async create(dto: CreateCustomerDto) {

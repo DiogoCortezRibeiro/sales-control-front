@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { Plus, Search, FileText, Ban, ShoppingBag, CreditCard, User, Calendar, X, DollarSign } from 'lucide-react';
+import { Plus, Search, FileText, Ban, ShoppingBag, CreditCard, User, Calendar, X, DollarSign, ArrowUp, ArrowDown, ChevronRight, ChevronLeft, Printer, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import api from '../lib/api';
 import ConfirmationModal from '../components/ConfirmationModal';
@@ -32,15 +32,19 @@ export default function SalesPage() {
     const [showModal, setShowModal] = useState(false);
     const [detalhes, setDetalhes] = useState<Venda | null>(null);
     const [confirmCancel, setConfirmCancel] = useState<{ id: string } | null>(null);
+    const [order, setOrder] = useState<'asc' | 'desc'>('desc');
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
 
     const fetch = useCallback(async () => {
         setLoading(true);
-        const p: any = { search, limit: 100 };
+        const p: any = { search, page, order, limit: 10 };
         if (statusFiltro) p.status = statusFiltro;
         const { data } = await api.get('/sales', { params: p });
         setVendas(data.data);
+        setTotalPages(data.meta.totalPages);
         setLoading(false);
-    }, [search, statusFiltro]);
+    }, [search, statusFiltro, page, order]);
 
     useEffect(() => { fetch(); }, [fetch]);
 
@@ -80,6 +84,88 @@ export default function SalesPage() {
         }
     };
 
+    const handlePrint = (venda: any) => {
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) return;
+
+        const content = `
+            <html>
+                <head>
+                    <title>Comprovante de Venda - ${venda.id}</title>
+                    <style>
+                        body { font-family: sans-serif; padding: 20px; line-height: 1.5; font-size: 14px; color: #333; }
+                        .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px; }
+                        .info { margin-bottom: 20px; display: grid; grid-template-cols: 1fr 1fr; gap: 10px; }
+                        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                        th { text-align: left; border-bottom: 2px solid #eee; padding: 8px; color: #666; font-size: 11px; text-transform: uppercase; }
+                        td { padding: 10px 8px; border-bottom: 1px solid #eee; }
+                        .total-section { margin-top: 30px; border-top: 2px solid #333; padding-top: 15px; }
+                        .total-row { display: flex; justify-content: flex-end; gap: 20px; margin-bottom: 5px; }
+                        .total-label { font-weight: bold; color: #666; }
+                        .total-value { font-weight: 800; min-width: 100px; text-align: right; }
+                        .grand-total { font-size: 20px; color: #000; margin-top: 10px; }
+                        @media print { .no-print { display: none; } }
+                    </style>
+                </head>
+                <body>
+                    <div class="header">
+                        <h1 style="margin:0">VendasPro</h1>
+                        <p style="margin:5px 0 0">Comprovante de Venda</p>
+                    </div>
+                    <div class="info">
+                        <div>
+                            <p><strong>ID:</strong> ${venda.id}</p>
+                            <p><strong>Data:</strong> ${format(new Date(venda.dataVenda), 'dd/MM/yyyy HH:mm')}</p>
+                        </div>
+                        <div style="text-align: right">
+                            <p><strong>Cliente:</strong> ${venda.cliente?.nome}</p>
+                            <p><strong>Pagamento:</strong> ${venda.formaPagamento}</p>
+                        </div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Produto</th>
+                                <th style="text-align: center">Qtd</th>
+                                <th style="text-align: right">V. Unit.</th>
+                                <th style="text-align: right">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${venda.itens.map((item: any) => `
+                                <tr>
+                                    <td style="font-weight: bold">${item.produto?.nome}</td>
+                                    <td style="text-align: center">${item.quantidade}</td>
+                                    <td style="text-align: right">${fmt(item.valorUnitario)}</td>
+                                    <td style="text-align: right">${fmt(item.totalItem)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                    <div class="total-section">
+                        <div class="total-row">
+                            <span class="total-label">Subtotal:</span>
+                            <span class="total-value">${fmt(venda.subtotal)}</span>
+                        </div>
+                        <div class="total-row">
+                            <span class="total-label">Desconto:</span>
+                            <span class="total-value">${fmt(venda.desconto)}</span>
+                        </div>
+                        <div class="total-row grand-total">
+                            <span class="total-label">TOTAL:</span>
+                            <span class="total-value">${fmt(venda.total)}</span>
+                        </div>
+                    </div>
+                    <p style="text-align: center; margin-top: 50px; color: #999; font-size: 10px;">Obrigado pela preferência!</p>
+                    <script>window.print(); setTimeout(() => window.close(), 500);</script>
+                </body>
+            </html>
+        `;
+
+        printWindow.document.write(content);
+        printWindow.document.close();
+    };
+
     return (
         <div className="space-y-6 animate-fade-in">
             <div className="flex items-center justify-between flex-wrap gap-4">
@@ -108,7 +194,16 @@ export default function SalesPage() {
                     <table className="w-full text-sm">
                         <thead className="bg-gray-50/50 border-b-2 border-gray-100">
                             <tr>
-                                {['Data', 'Cliente', 'Pagamento', 'Total', 'Status', 'Ações'].map(h => (
+                                <th
+                                    className="text-left px-6 py-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest cursor-pointer hover:bg-gray-100/50 transition-colors"
+                                    onClick={() => setOrder(order === 'desc' ? 'asc' : 'desc')}
+                                >
+                                    <div className="flex items-center gap-1">
+                                        Data
+                                        {order === 'desc' ? <ArrowDown size={12} /> : <ArrowUp size={12} />}
+                                    </div>
+                                </th>
+                                {['Cliente', 'Pagamento', 'Total', 'Status', 'Ações'].map(h => (
                                     <th key={h} className="text-left px-6 py-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">{h}</th>
                                 ))}
                             </tr>
@@ -148,6 +243,29 @@ export default function SalesPage() {
                         </tbody>
                     </table>
                 </div>
+                {totalPages > 1 && (
+                    <div className="px-6 py-4 bg-gray-50/30 border-t border-gray-100 flex items-center justify-between">
+                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                            Página {page} de {totalPages}
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setPage(p => Math.max(1, p - 1))}
+                                disabled={page === 1}
+                                className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 disabled:opacity-50 hover:bg-gray-50 transition-colors"
+                            >
+                                <ChevronLeft size={16} />
+                            </button>
+                            <button
+                                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                disabled={page === totalPages}
+                                className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 disabled:opacity-50 hover:bg-gray-50 transition-colors"
+                            >
+                                <ChevronRight size={16} />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {showModal && detalhes && (
@@ -162,7 +280,15 @@ export default function SalesPage() {
                                         {getSaleStatus(detalhes).label}
                                     </span>
                                 </div>
-                                <p className="text-[10px] text-gray-400 font-bold mt-0.5 tracking-tight">ID: {detalhes.id}</p>
+                                <div className="flex items-center gap-3 mt-0.5">
+                                    <p className="text-[10px] text-gray-400 font-bold tracking-tight">ID: {detalhes.id}</p>
+                                    <button
+                                        onClick={() => handlePrint(detalhes)}
+                                        className="flex items-center gap-1 text-[10px] font-bold text-primary-600 hover:text-primary-700 uppercase tracking-tighter"
+                                    >
+                                        <Printer size={12} /> Imprimir Comprovante
+                                    </button>
+                                </div>
                             </div>
                             <button onClick={() => setShowModal(false)} className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 transition-colors">
                                 <X size={16} />

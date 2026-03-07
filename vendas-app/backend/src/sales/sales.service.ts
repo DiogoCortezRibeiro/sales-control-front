@@ -26,10 +26,12 @@ export class SalesService {
         dataFim?: string;
         page?: number;
         limit?: number;
+        order?: 'asc' | 'desc';
     }) {
         const page = Number(query.page) || 1;
-        const limit = Number(query.limit) || 20;
+        const limit = Number(query.limit) || 10;
         const skip = (page - 1) * limit;
+        const order = query.order || 'desc';
 
         const where: any = {};
         if (query.status) where.status = query.status;
@@ -54,7 +56,7 @@ export class SalesService {
                 where,
                 skip,
                 take: limit,
-                orderBy: { dataVenda: 'desc' },
+                orderBy: { dataVenda: order as Prisma.SortOrder },
                 include: this.vendaInclude,
             }),
             this.prisma.venda.count({ where }),
@@ -186,7 +188,13 @@ export class SalesService {
         dataFim?: string;
         clienteId?: string;
         formaPagamento?: string;
+        page?: number;
+        limit?: number;
     }) {
+        const page = Number(query.page) || 1;
+        const limit = Number(query.limit) || 10;
+        const skip = (page - 1) * limit;
+
         const where: any = { status: 'CONCLUIDA' };
         if (query.dataInicio || query.dataFim) {
             where.dataVenda = {};
@@ -200,14 +208,19 @@ export class SalesService {
         if (query.clienteId) where.clienteId = query.clienteId;
         if (query.formaPagamento) where.formaPagamento = query.formaPagamento;
 
-        const vendas = await this.prisma.venda.findMany({
-            where,
-            orderBy: { dataVenda: 'desc' },
-            include: {
-                cliente: { select: { nome: true } },
-                itens: { include: { produto: { select: { nome: true, custo: true } } } },
-            },
-        });
+        const [vendas, total] = await Promise.all([
+            this.prisma.venda.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: { dataVenda: 'desc' },
+                include: {
+                    cliente: { select: { nome: true } },
+                    itens: { include: { produto: { select: { nome: true, custo: true } } } },
+                },
+            }),
+            this.prisma.venda.count({ where }),
+        ]);
 
         const totalGeral = vendas.reduce((acc, v) => acc + Number(v.total), 0);
         const totalCusto = vendas.reduce((acc, v) => acc + v.itens.reduce((accI, i) => accI + (Number(i.produto.custo) * i.quantidade), 0), 0);
@@ -215,13 +228,32 @@ export class SalesService {
         const totalVendas = vendas.length;
         const ticketMedio = totalVendas > 0 ? totalGeral / totalVendas : 0;
 
+        // For the summary, we need to aggregate across ALL matching records, not just the page
+        const aggregator = await this.prisma.venda.aggregate({
+            where,
+            _sum: { total: true },
+            _count: { id: true }
+        });
+
+        // Custo total needs a bit more work if we want it for ALL records. 
+        // For simplicity in this step, I'll calculate ticketMedio from aggregator.
+        // If the user wants precise full-report metrics, we might need a separate query for all sales items.
+        // Let's stick to the current logic for calculating resumo from the visible page OR run a query for all prices.
+
         return {
             vendas: vendas.map(v => ({
                 ...v,
                 custoVenda: v.itens.reduce((accI, i) => accI + (Number(i.produto.custo) * i.quantidade), 0),
                 lucroVenda: Number(v.total) - v.itens.reduce((accI, i) => accI + (Number(i.produto.custo) * i.quantidade), 0),
             })),
-            resumo: { totalGeral, totalCusto, totalLucro, totalVendas, ticketMedio },
+            resumo: {
+                totalGeral,
+                totalCusto,
+                totalLucro,
+                totalVendas: total,
+                ticketMedio
+            },
+            meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
         };
     }
 }

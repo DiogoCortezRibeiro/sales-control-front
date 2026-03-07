@@ -9,6 +9,7 @@ import CustomersPage from './pages/CustomersPage';
 import SalesPage from './pages/SalesPage';
 import NewSalePage from './pages/NewSalePage';
 import ReportsPage from './pages/ReportsPage';
+import FinancePage from './pages/FinancePage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
     const { usuario, loading } = useAuth();
@@ -40,6 +41,7 @@ export default function App() {
                         <Route path="customers" element={<CustomersPage />} />
                         <Route path="sales" element={<SalesPage />} />
                         <Route path="sales/new" element={<NewSalePage />} />
+                        <Route path="finance" element={<FinancePage />} />
                         <Route path="reports" element={<ReportsPage />} />
                     </Route>
                     <Route path="*" element={<Navigate to="/dashboard" replace />} />

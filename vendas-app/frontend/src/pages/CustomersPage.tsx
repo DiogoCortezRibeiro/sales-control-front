@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Plus, Search, Edit2, Trash2, Users } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Users, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import api from '../lib/api';
 import ConfirmationModal from '../components/ConfirmationModal';
+import CustomerDetailsModal from '../components/CustomerDetailsModal';
 import toast from 'react-hot-toast';
 
 interface Cliente {
@@ -16,20 +17,25 @@ interface Cliente {
 }
 
 export default function CustomersPage() {
-    const [clientes, setClientes] = useState<Cliente[]>([]);
+    const [customers, setCustomers] = useState<Cliente[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [editing, setEditing] = useState<Cliente | null>(null);
     const [form, setForm] = useState<Partial<Cliente>>({});
     const [confirmDelete, setConfirmDelete] = useState<{ id: string } | null>(null);
+    const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
 
     const fetch = useCallback(async () => {
         setLoading(true);
-        const { data } = await api.get('/customers', { params: { search, limit: 100 } });
-        setClientes(data.data);
+        const { data } = await api.get('/customers', { params: { search, page, limit: 10 } });
+        setCustomers(data.data);
+        setTotalPages(data.meta.totalPages);
         setLoading(false);
-    }, [search]);
+    }, [search, page]);
 
     useEffect(() => { fetch(); }, [fetch]);
 
@@ -73,14 +79,14 @@ export default function CustomersPage() {
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Clientes</h1>
-                    <p className="text-gray-500 text-sm">{clientes.length} cliente(s)</p>
+                    <p className="text-gray-500 text-sm">{customers.length} cliente(s) nesta página</p>
                 </div>
                 <button className="btn-primary" onClick={openCreate}><Plus size={16} />Novo Cliente</button>
             </div>
 
             <div className="relative max-w-sm">
                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input className="input pl-9" placeholder="Buscar cliente..." value={search} onChange={e => setSearch(e.target.value)} />
+                <input className="input pl-9" placeholder="Buscar cliente..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
             </div>
 
             <div className="card overflow-hidden">
@@ -96,12 +102,12 @@ export default function CustomersPage() {
                         <tbody className="divide-y divide-gray-50">
                             {loading ? (
                                 <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Carregando...</td></tr>
-                            ) : clientes.length === 0 ? (
+                            ) : customers.length === 0 ? (
                                 <tr><td colSpan={6} className="px-4 py-12 text-center text-gray-400">
                                     <Users size={40} className="mx-auto mb-2 opacity-30" /><p>Nenhum cliente encontrado</p>
                                 </td></tr>
                             ) : (
-                                clientes.map(c => (
+                                customers.map(c => (
                                     <tr key={c.id} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-4 py-3 font-medium text-gray-900">{c.nome}</td>
                                         <td className="px-4 py-3 text-gray-600">{c.telefone}</td>
@@ -112,6 +118,7 @@ export default function CustomersPage() {
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex gap-1">
+                                                <button onClick={() => setSelectedCustomerId(c.id)} className="p-1.5 text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors" title="Ver Perfil Detalhado"><Eye size={15} /></button>
                                                 <button onClick={() => openEdit(c)} className="p-1.5 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"><Edit2 size={15} /></button>
                                                 <button onClick={() => setConfirmDelete({ id: c.id })} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={15} /></button>
                                             </div>
@@ -122,6 +129,17 @@ export default function CustomersPage() {
                         </tbody>
                     </table>
                 </div>
+                {totalPages > 1 && (
+                    <div className="px-6 py-4 bg-gray-50/30 border-t border-gray-100 flex items-center justify-between">
+                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                            Página {page} de {totalPages}
+                        </div>
+                        <div className="flex gap-2">
+                            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="p-2 rounded-lg border border-gray-200 bg-white disabled:opacity-50"><ChevronLeft size={16} /></button>
+                            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="p-2 rounded-lg border border-gray-200 bg-white disabled:opacity-50"><ChevronRight size={16} /></button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {showModal && (
@@ -176,6 +194,13 @@ export default function CustomersPage() {
                 type="danger"
                 confirmText="Excluir"
             />
+
+            {selectedCustomerId && (
+                <CustomerDetailsModal
+                    customerId={selectedCustomerId}
+                    onClose={() => setSelectedCustomerId(null)}
+                />
+            )}
         </div>
     );
 }

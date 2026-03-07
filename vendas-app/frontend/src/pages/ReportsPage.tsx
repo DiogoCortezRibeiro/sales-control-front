@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Download, Search, FileText } from 'lucide-react';
+import { Download, Search, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../lib/api';
-import { format } from 'date-fns';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 interface Venda {
@@ -23,22 +23,30 @@ export default function ReportsPage() {
     const [resumo, setResumo] = useState<any>(null);
     const [loading, setLoading] = useState(false);
 
-    const [dataInicio, setDataInicio] = useState('');
-    const [dataFim, setDataFim] = useState('');
+    const [dataInicio, setDataInicio] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
+    const [dataFim, setDataFim] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
+    const [page, setPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(1);
 
     const fetch = async () => {
         setLoading(true);
-        const params: any = {};
+        const params: any = { page, limit: 10 };
         if (dataInicio) params.dataInicio = dataInicio;
         if (dataFim) params.dataFim = dataFim;
 
         const { data } = await api.get('/sales/report', { params });
         setVendas(data.vendas);
         setResumo(data.resumo);
+        setTotalPages(data.meta.totalPages);
         setLoading(false);
     };
 
-    useEffect(() => { fetch(); }, []);
+    useEffect(() => { fetch(); }, [page]);
+
+    const handleFilter = () => {
+        setPage(1);
+        fetch();
+    };
 
     const exportCsv = () => {
         if (vendas.length === 0) return;
@@ -82,7 +90,20 @@ export default function ReportsPage() {
                     <label className="label">Data Fim</label>
                     <input type="date" className="input" value={dataFim} onChange={e => setDataFim(e.target.value)} />
                 </div>
-                <button onClick={fetch} className="btn-primary"><Search size={16} /> Filtrar</button>
+                <div className="flex gap-2">
+                    <button onClick={handleFilter} className="btn-primary flex-1 sm:flex-none"><Search size={16} /> Filtrar</button>
+                    <button
+                        onClick={() => {
+                            setDataInicio('');
+                            setDataFim('');
+                            setPage(1);
+                        }}
+                        className="bg-gray-100 text-gray-600 px-4 h-11 rounded-xl font-bold text-xs hover:bg-gray-200 transition-colors"
+                        title="Limpar Filtros"
+                    >
+                        Limpar
+                    </button>
+                </div>
             </div>
 
             {resumo && (
@@ -137,6 +158,29 @@ export default function ReportsPage() {
                         </tbody>
                     </table>
                 </div>
+                {totalPages > 1 && (
+                    <div className="px-6 py-4 bg-gray-50/30 border-t border-gray-100 flex items-center justify-between">
+                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                            Página {page} de {totalPages}
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => setPage(p => Math.max(1, p - 1))}
+                                disabled={page === 1}
+                                className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 disabled:opacity-50 hover:bg-gray-50 transition-colors"
+                            >
+                                <ChevronLeft size={16} />
+                            </button>
+                            <button
+                                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                                disabled={page === totalPages}
+                                className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 disabled:opacity-50 hover:bg-gray-50 transition-colors"
+                            >
+                                <ChevronRight size={16} />
+                            </button>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
