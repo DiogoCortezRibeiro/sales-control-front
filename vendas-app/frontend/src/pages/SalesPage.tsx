@@ -285,7 +285,7 @@ export default function SalesPage() {
 
             {showModal && detalhes && (
                 <div className="fixed inset-0 backdrop-blur-sm z-[70] flex items-center justify-center p-2 sm:p-4 bg-slate-900/60" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
-                    <div className="bg-white rounded-[1.5rem] sm:rounded-[2rem] shadow-[0_30px_90px_-20px_rgba(0,0,0,0.4)] w-full max-w-4xl max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200 border border-gray-100 overflow-hidden relative">
+                    <div className="bg-white rounded-[1.5rem] sm:rounded-[2rem] shadow-[0_30px_90px_-20px_rgba(0,0,0,0.4)] w-full max-w-4xl max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200 border border-gray-100 overflow-hidden relative" style={{ marginTop: '20em' }}>
 
                         <div className="px-6 sm:px-8 py-5 flex justify-between items-start border-b border-gray-100 bg-white shrink-0">
                             <div>
