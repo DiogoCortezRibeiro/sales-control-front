@@ -30,6 +30,7 @@ export default function SalesPage() {
     const [search, setSearch] = useState('');
     const [statusFiltro, setStatusFiltro] = useState('');
     const [showModal, setShowModal] = useState(false);
+    const [modalLoading, setModalLoading] = useState(false);
     const [detalhes, setDetalhes] = useState<Venda | null>(null);
     const [confirmCancel, setConfirmCancel] = useState<{ id: string } | null>(null);
     const [order, setOrder] = useState<'asc' | 'desc'>('desc');
@@ -49,9 +50,16 @@ export default function SalesPage() {
     useEffect(() => { fetch(); }, [fetch]);
 
     const openDetalhes = async (id: string) => {
-        const { data } = await api.get(`/sales/${id}`);
-        setDetalhes(data);
-        setShowModal(true);
+        try {
+            setModalLoading(true);
+            const { data } = await api.get(`/sales/${id}`);
+            setDetalhes(data);
+            setShowModal(true);
+        } catch (e) {
+            toast.error('Erro ao buscar detalhes da venda');
+        } finally {
+            setModalLoading(false);
+        }
     };
 
     const cancelar = async (id: string) => {
@@ -235,7 +243,14 @@ export default function SalesPage() {
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <button onClick={() => openDetalhes(v.id)} className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all"><FileText size={18} /></button>
+                                            <div className="flex gap-2">
+                                                <button onClick={() => openDetalhes(v.id)} title="Ver detalhes" className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all">
+                                                    {modalLoading && detalhes?.id === v.id ? <div className="animate-spin h-4 w-4 border-2 border-primary-600 border-t-transparent rounded-full" /> : <FileText size={18} />}
+                                                </button>
+                                                <button onClick={() => handlePrint(v)} title="Imprimir" className="p-2 text-gray-400 hover:text-primary-600 hover:bg-primary-50 rounded-xl transition-all">
+                                                    <Printer size={18} />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
@@ -269,10 +284,10 @@ export default function SalesPage() {
             </div>
 
             {showModal && detalhes && (
-                <div className="fixed inset-0 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
-                    <div className="bg-white rounded-[2rem] shadow-[0_20px_70px_-10px_rgba(0,0,0,0.15)] w-full max-w-4xl max-h-[92vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 border border-gray-100">
+                <div className="fixed inset-0 backdrop-blur-sm z-[60] flex items-start justify-center p-2 sm:p-4 overflow-y-auto bg-slate-900/60" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
+                    <div className="bg-white rounded-[1.5rem] sm:rounded-[2rem] shadow-[0_20px_70px_-10px_rgba(0,0,0,0.3)] w-full max-w-4xl min-h-0 my-auto flex flex-col animate-in zoom-in-95 duration-200 border border-gray-100 overflow-hidden">
 
-                        <div className="px-8 pt-6 pb-4 flex justify-between items-start">
+                        <div className="px-6 sm:px-8 pt-5 sm:pt-6 pb-4 flex justify-between items-start border-b border-gray-50 bg-white sticky top-0 z-10">
                             <div>
                                 <div className="flex items-center gap-2">
                                     <h2 className="text-xl font-black text-gray-900">Detalhamento</h2>
@@ -295,24 +310,24 @@ export default function SalesPage() {
                             </button>
                         </div>
 
-                        <div className="px-8 pb-6 overflow-y-auto flex-1 custom-scrollbar space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm space-y-1">
-                                    <div className="flex items-center gap-1.5 text-indigo-500 font-bold text-[9px] uppercase tracking-widest">
-                                        <User size={12} /> Cliente
+                        <div className="px-6 sm:px-8 py-4 sm:py-6 overflow-y-auto flex-1 custom-scrollbar space-y-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="bg-gray-50/50 p-5 rounded-2xl border border-gray-100 shadow-sm space-y-2">
+                                    <div className="flex items-center gap-1.5 text-indigo-500 font-bold text-[10px] uppercase tracking-widest">
+                                        <User size={14} /> Cliente
                                     </div>
                                     <div>
-                                        <p className="text-sm font-black text-gray-900 leading-tight truncate">{detalhes.cliente?.nome}</p>
-                                        <p className="text-[11px] text-gray-500 font-medium">{detalhes.cliente?.telefone || '(00) 00000-0000'}</p>
+                                        <p className="text-base sm:text-lg font-black text-gray-900 leading-tight">{detalhes.cliente?.nome}</p>
+                                        <p className="text-xs sm:text-sm text-gray-500 font-medium mt-1">{detalhes.cliente?.telefone || '(00) 00000-0000'}</p>
                                     </div>
                                 </div>
-                                <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm space-y-1">
-                                    <div className="flex items-center gap-1.5 text-emerald-500 font-bold text-[9px] uppercase tracking-widest">
-                                        <CreditCard size={12} /> Pagamento
+                                <div className="bg-gray-50/50 p-5 rounded-2xl border border-gray-100 shadow-sm space-y-2">
+                                    <div className="flex items-center gap-1.5 text-emerald-500 font-bold text-[10px] uppercase tracking-widest">
+                                        <CreditCard size={14} /> Pagamento
                                     </div>
                                     <div>
-                                        <p className="text-sm font-black text-gray-900 uppercase leading-tight">{detalhes.formaPagamento}</p>
-                                        <p className="text-[11px] text-gray-500 font-medium">{fmtDate(detalhes.dataVenda)}</p>
+                                        <p className="text-base sm:text-lg font-black text-gray-900 uppercase leading-tight">{detalhes.formaPagamento}</p>
+                                        <p className="text-xs sm:text-sm text-gray-500 font-medium mt-1">{fmtDate(detalhes.dataVenda)}</p>
                                     </div>
                                 </div>
                             </div>
@@ -411,9 +426,12 @@ export default function SalesPage() {
                                                         </td>
                                                         <td className="px-5 py-2 text-right">
                                                             {p.status === 'PENDENTE' && detalhes.status !== 'CANCELADA' ? (
-                                                                <button onClick={() => pagarParcela(detalhes.id, p.id)} className="bg-primary-600 text-white px-2 py-0.5 rounded font-bold text-[9px] hover:bg-primary-700 transition-colors">Baixar</button>
+                                                                <button onClick={() => pagarParcela(detalhes.id, p.id)} className="bg-primary-600 text-white px-3 py-1 rounded-lg font-bold text-[10px] hover:bg-primary-700 transition-all shadow-md active:scale-95">Baixar</button>
                                                             ) : (
-                                                                <span className="text-gray-400 text-[9px]">{p.dataPagamento ? format(new Date(p.dataPagamento), 'dd/MM/yy') : '-'}</span>
+                                                                <div className="flex flex-col items-end">
+                                                                    <span className="text-emerald-600 font-bold text-[10px]">PAGA</span>
+                                                                    <span className="text-gray-400 text-[9px]">{p.dataPagamento ? format(new Date(p.dataPagamento), 'dd/MM/yy') : '-'}</span>
+                                                                </div>
                                                             )}
                                                         </td>
                                                     </tr>
@@ -425,13 +443,13 @@ export default function SalesPage() {
                             )}
                         </div>
 
-                        <div className="px-8 py-4 bg-white border-t border-gray-100 flex justify-between items-center shadow-[0_-5px_20px_rgba(0,0,0,0.03)]">
+                        <div className="px-6 sm:px-8 py-4 bg-white border-t border-gray-100 flex flex-col sm:flex-row gap-3 justify-between items-center shadow-[0_-5px_20px_rgba(0,0,0,0.03)] sticky bottom-0 z-10">
                             {detalhes.status !== 'CANCELADA' ? (
-                                <button onClick={() => setConfirmCancel({ id: detalhes.id })} className="btn-danger flex items-center gap-2 h-10 px-4 text-xs font-bold">
-                                    <Ban size={16} /> Cancelar Venda
+                                <button onClick={() => setConfirmCancel({ id: detalhes.id })} className="btn-danger w-full sm:w-auto flex items-center justify-center gap-2 h-11 px-6 text-sm font-bold order-2 sm:order-1">
+                                    <Ban size={18} /> Cancelar Venda
                                 </button>
-                            ) : <div />}
-                            <button className="bg-gray-100 text-gray-600 px-5 h-10 rounded-xl font-bold text-xs hover:bg-gray-200 transition-colors" onClick={() => setShowModal(false)}>
+                            ) : <div className="order-2 sm:order-1" />}
+                            <button className="bg-gray-100 text-gray-600 w-full sm:w-auto px-6 h-11 rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors order-1 sm:order-2" onClick={() => setShowModal(false)}>
                                 Fechar Janela
                             </button>
                         </div>
