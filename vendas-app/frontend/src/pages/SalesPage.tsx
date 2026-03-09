@@ -284,29 +284,29 @@ export default function SalesPage() {
             </div>
 
             {showModal && detalhes && (
-                <div className="fixed inset-0 backdrop-blur-sm z-[60] flex items-start justify-center p-2 sm:p-4 overflow-y-auto bg-slate-900/60" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
-                    <div className="bg-white rounded-[1.5rem] sm:rounded-[2rem] shadow-[0_20px_70px_-10px_rgba(0,0,0,0.3)] w-full max-w-4xl min-h-0 my-auto flex flex-col animate-in zoom-in-95 duration-200 border border-gray-100 overflow-hidden">
+                <div className="fixed inset-0 backdrop-blur-sm z-[70] flex items-center justify-center p-2 sm:p-4 bg-slate-900/60" onClick={e => e.target === e.currentTarget && setShowModal(false)}>
+                    <div className="bg-white rounded-[1.5rem] sm:rounded-[2rem] shadow-[0_30px_90px_-20px_rgba(0,0,0,0.4)] w-full max-w-4xl max-h-[92vh] flex flex-col animate-in zoom-in-95 duration-200 border border-gray-100 overflow-hidden relative">
 
-                        <div className="px-6 sm:px-8 pt-5 sm:pt-6 pb-4 flex justify-between items-start border-b border-gray-50 bg-white sticky top-0 z-10">
+                        <div className="px-6 sm:px-8 py-5 flex justify-between items-start border-b border-gray-100 bg-white shrink-0">
                             <div>
-                                <div className="flex items-center gap-2">
-                                    <h2 className="text-xl font-black text-gray-900">Detalhamento</h2>
-                                    <span className={`${getSaleStatus(detalhes).color} text-[9px] font-bold px-1.5 py-0.5 rounded uppercase`}>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                    <h2 className="text-xl font-black text-gray-900 tracking-tight">Detalhamento da Venda</h2>
+                                    <span className={`${getSaleStatus(detalhes).color} text-[10px] font-bold px-2 py-0.5 rounded-full uppercase`}>
                                         {getSaleStatus(detalhes).label}
                                     </span>
                                 </div>
-                                <div className="flex items-center gap-3 mt-0.5">
-                                    <p className="text-[10px] text-gray-400 font-bold tracking-tight">ID: {detalhes.id}</p>
+                                <div className="flex items-center gap-3 mt-1 flex-wrap">
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">#{detalhes.id.substring(0, 8)}</p>
                                     <button
                                         onClick={() => handlePrint(detalhes)}
-                                        className="flex items-center gap-1 text-[10px] font-bold text-primary-600 hover:text-primary-700 uppercase tracking-tighter"
+                                        className="flex items-center gap-1.5 text-[10px] font-bold text-primary-600 hover:text-primary-700 uppercase"
                                     >
                                         <Printer size={12} /> Imprimir Comprovante
                                     </button>
                                 </div>
                             </div>
-                            <button onClick={() => setShowModal(false)} className="w-7 h-7 flex items-center justify-center rounded-full bg-gray-50 text-gray-400 hover:bg-gray-100 transition-colors">
-                                <X size={16} />
+                            <button onClick={() => setShowModal(false)} className="w-8 h-8 flex items-center justify-center rounded-xl bg-gray-50 text-gray-400 hover:text-gray-900 transition-colors">
+                                <X size={20} />
                             </button>
                         </div>
 
@@ -443,13 +443,13 @@ export default function SalesPage() {
                             )}
                         </div>
 
-                        <div className="px-6 sm:px-8 py-4 bg-white border-t border-gray-100 flex flex-col sm:flex-row gap-3 justify-between items-center shadow-[0_-5px_20px_rgba(0,0,0,0.03)] sticky bottom-0 z-10">
+                        <div className="px-6 sm:px-8 py-5 bg-gray-50/50 border-t border-gray-100 flex flex-col sm:flex-row gap-4 justify-between items-center shrink-0">
                             {detalhes.status !== 'CANCELADA' ? (
                                 <button onClick={() => setConfirmCancel({ id: detalhes.id })} className="btn-danger w-full sm:w-auto flex items-center justify-center gap-2 h-11 px-6 text-sm font-bold order-2 sm:order-1">
                                     <Ban size={18} /> Cancelar Venda
                                 </button>
-                            ) : <div className="order-2 sm:order-1" />}
-                            <button className="bg-gray-100 text-gray-600 w-full sm:w-auto px-6 h-11 rounded-xl font-bold text-sm hover:bg-gray-200 transition-colors order-1 sm:order-2" onClick={() => setShowModal(false)}>
+                            ) : <div className="hidden sm:block order-2 sm:order-1" />}
+                            <button className="bg-white border-2 border-gray-200 text-gray-600 w-full sm:w-auto px-8 h-11 rounded-xl font-bold text-sm hover:bg-gray-50 transition-colors order-1 sm:order-2 shadow-sm" onClick={() => setShowModal(false)}>
                                 Fechar Janela
                             </button>
                         </div>
